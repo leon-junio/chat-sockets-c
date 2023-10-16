@@ -127,7 +127,7 @@ void check_command(char *buff)
         strftime(time_string, sizeof(time_string), "%H:%M:%S", time_info);
 
         // Print the messages
-        printf("[%s] \033[35m%s\033[0m\n", time_string, buff);
+        printf("[%s] %s\n", time_string, buff);
 
         pthread_mutex_unlock(&mutex);
     }
@@ -158,7 +158,7 @@ void *write_messages(void *arg)
         strftime(time_string, sizeof(time_string), "%H:%M:%S", time_info);
 
         // Print the messages
-        printf("[%s] \033[32m%s\033[0m\n", time_string, buff);
+        printf("[%s] %s\n", time_string, buff);
 
         pthread_mutex_unlock(&mutex);
     }
