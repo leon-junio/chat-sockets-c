@@ -15,14 +15,120 @@
 struct client_info
 {
     int client_id;
-    char name[20];
+    char name[64];
     struct sockaddr_in caddr;
 };
 
-struct client_info clients[MAX_CLIENTS];
+struct client_info *clients[MAX_CLIENTS];
 int client_sz = 0;
 
-void handle_client(struct client_info client, struct client_info clients[], int *client_sz)
+void remove_client(int client_id)
+{
+    for (int i = 0; i < client_sz; i++)
+    {
+        if (clients[i]->client_id == client_id)
+        {
+            // Shift the rest of the clients to fill the gap
+            for (int j = i; j < client_sz - 1; j++)
+                clients[j] = clients[j + 1];
+            (client_sz)--;
+            break;
+        }
+    }
+}
+
+int check_command(char *buff, struct client_info *client)
+{
+    if (strcmp(buff, "/quit\n") == 0)
+    {
+        close(client->client_id);
+        remove_client(client->client_id);
+    }
+    else if (strstr(buff, "/setname") != NULL)
+    {
+        char *name = strtok(buff, " ");
+        name = strtok(NULL, " ");
+        // check if name is already taken
+        for (int i = 0; i < client_sz; i++)
+        {
+            if (strcmp(clients[i]->name, name) == 0)
+            {
+                char message[BUF_SIZE];
+                sprintf(message, "server: Name already taken");
+                send(client->client_id, message, strlen(message) + 1, 0);
+                return 1;
+            }
+        }
+        // remove \n
+        name[strlen(name) - 1] = '\0';
+        strcpy(client->name, name);
+        char message[BUF_SIZE];
+        sprintf(message, "server: Name set to %s", name);
+        send(client->client_id, message, strlen(message) + 1, 0);
+    }
+    else if (strcmp(buff, "/list\n") == 0)
+    {
+        char message[BUF_SIZE];
+        for (int i = 0; i < client_sz; i++)
+        {
+            sprintf(message, "%d: %s <%s>\n", i, clients[i]->name, inet_ntoa(clients[i]->caddr.sin_addr));
+        }
+        send(client->client_id, message, strlen(message) + 1, 0);
+    }
+    else if (strcmp(buff, "/ping\n") == 0)
+    {
+        char message[BUF_SIZE];
+        sprintf(message, "server: Pong");
+        send(client->client_id, message, strlen(message) + 1, 0);
+    }
+    else if (strstr(buff, "/msg") != NULL)
+    {
+        printf("%s", buff);
+        char *name = strtok(buff, " ");
+        name = strtok(NULL, " ");
+        char *msg = strtok(NULL, " ");
+        printf("%s\n", msg);
+        char message[BUF_SIZE];
+        if (strcmp(name, "Anonymous") != 0)
+        {
+            int found = 0;
+            for (int i = 0; i < client_sz; i++)
+            {
+                if (strcmp(clients[i]->name, name) == 0)
+                {
+                    found = 1;
+                    sprintf(message, "\033[35m%s <%s> -> %s: %s\033[0m", client->name, inet_ntoa(client->caddr.sin_addr), clients[i]->name, msg);
+                    int status = send(clients[i]->client_id, message, strlen(message) + 1, 0);
+                    if (status >= 0)
+                        send(client->client_id, message, strlen(message) + 1, 0);
+                    else
+                    {
+                        sprintf(message, "server: Cannot send message to %s", name);
+                        send(client->client_id, message, strlen(message) + 1, 0);
+                    }
+                    break;
+                }
+            }
+            if (!found)
+            {
+                sprintf(message, "server: Cannot find user %s", name);
+                send(client->client_id, message, strlen(message) + 1, 0);
+            }
+        }
+        else
+        {
+            sprintf(message, "server: Cannot send message to Anonymous");
+            send(client->client_id, message, strlen(message) + 1, 0);
+        }
+    }
+    else
+    {
+        return 0;
+    }
+    return 1;
+}
+
+void handle_client(struct client_info *client)
 {
     char buff[BUF_SIZE];
     char message[BUF_SIZE + sizeof(struct client_info) + 1];
@@ -30,34 +136,32 @@ void handle_client(struct client_info client, struct client_info clients[], int 
 
     while (1)
     {
-        bytesReceived = recv(client.client_id, buff, sizeof(buff), 0);
+        bytesReceived = recv(client->client_id, buff, sizeof(buff), 0);
         if (bytesReceived <= 0)
         {
+            printf("Client disconnected: %s\n", inet_ntoa(client->caddr.sin_addr));
             // Handle client disconnection or error here
-            close(client.client_id);
+            close(client->client_id);
             // Remove the client from the array (if it exists)
-            for (int i = 0; i < *client_sz; i++)
-            {
-                if (clients[i].client_id == client.client_id)
-                {
-                    // Shift the rest of the clients to fill the gap
-                    for (int j = i; j < *client_sz - 1; j++)
-                        clients[j] = clients[j + 1];
-                    (*client_sz)--;
-                    break;
-                }
-            }
+            remove_client(client->client_id);
             return;
         }
 
-        sprintf(message, "%s: %s", inet_ntoa(client.caddr.sin_addr), buff);
+        printf("data received!");
 
-        // Broadcast the received message to all clients
-        for (int i = 0; i < *client_sz; i++)
+        printf("%s\n", buff);
+
+        if (check_command(buff, client) == 0)
         {
-            if (send(clients[i].client_id, message, strlen(message) + 1, 0) == -1)
+            sprintf(message, "\033[32m%s <%s>: %s\033[0m", client->name, inet_ntoa(client->caddr.sin_addr), buff);
+            // Broadcast the received message to all clients
+            for (int i = 0; i < client_sz; i++)
             {
-                perror("send");
+                int st = send(clients[i]->client_id, message, strlen(message) + 1, 0);
+                if (st == -1)
+                {
+                    perror("send");
+                }
             }
         }
 
@@ -66,11 +170,12 @@ void handle_client(struct client_info client, struct client_info clients[], int 
     }
 }
 
-int check_client(int client_id, struct client_info clients[], int client_sz)
+int check_client(int client_id)
 {
+    printf("Checking client %d\n", client_id);
     for (int i = 0; i < client_sz; i++)
     {
-        if (clients[i].client_id == client_id)
+        if (clients[i]->client_id == client_id)
         {
             return 0;
         }
@@ -80,8 +185,8 @@ int check_client(int client_id, struct client_info clients[], int client_sz)
 
 void *client_thread(void *arg)
 {
-    struct client_info client = *(struct client_info *)arg;
-    handle_client(client, clients, &client_sz);
+    struct client_info *client = (struct client_info *)arg;
+    handle_client(client);
     pthread_exit(NULL);
 }
 
@@ -118,6 +223,7 @@ int main()
     {
         int csize = sizeof(caddr);
         int *client_id = (int *)malloc(sizeof(int));
+        struct client_info *client_info = malloc(sizeof(struct client_info));
         *client_id = accept(server, (struct sockaddr *)&caddr, &csize);
         if (*client_id == -1)
         {
@@ -131,20 +237,27 @@ int main()
         if (client_sz == MAX_CLIENTS)
         {
             puts("Server is full");
-            send(*client_id, "Server is full", 14, 0);
+            send(*client_id, "server: Server is full", 14, 0);
             close(*client_id);
             free(client_id);
             continue;
         }
 
-        if (check_client(*client_id, clients, client_sz))
+        if (check_client(*client_id) == 1)
         {
-            struct client_info client_info = {
+            *client_info = (struct client_info){
                 .client_id = *client_id,
-                .caddr = caddr};
+                .caddr = caddr,
+                .name = "Anonymous"};
             clients[client_sz++] = client_info;
+            printf("%p\n", &client_info);
+            // print array of clients
+            for (int i = 0; i < client_sz; i++)
+            {
+                printf("%d: %d <%s>\n", i, clients[i]->client_id, inet_ntoa(clients[i]->caddr.sin_addr));
+            }
             pthread_t tid;
-            pthread_create(&tid, NULL, client_thread, &client_info);
+            pthread_create(&tid, NULL, client_thread, client_info);
             pthread_detach(tid);
         }
         else
