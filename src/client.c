@@ -12,23 +12,19 @@
 #define BUF_SIZE 4096
 
 int s, bytes;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void *write_messages(void *arg)
 {
     char buff[BUF_SIZE];
-    int count = 0;
     while (1)
     {
-        // Clear the terminal screen
-        printf("\033[H\033[J");
-        printf("Client ID: %d\n", count++);
+        bytes = read(s, buff, BUF_SIZE);
 
         // Print the messages
-        bytes = read(s, buff, BUF_SIZE);
-        write(1, buff, bytes);
+        printf("%s", buff);
 
-        // Sleep for a while
-        sleep(1);
+        pthread_mutex_unlock(&mutex);
     }
 }
 
@@ -37,8 +33,9 @@ void *get_input(void *arg)
     char input[BUF_SIZE];
     while (1)
     {
-        printf("Type a message: ");
         fgets(input, BUF_SIZE, stdin);
+
+        pthread_mutex_lock(&mutex);
 
         // Send the message to the server
         write(s, input, strlen(input) + 1);
@@ -81,16 +78,9 @@ int main(int argc, char **argv)
     if (c < 0)
         fatal("connect failed");
 
-<<<<<<< HEAD
-    write(s, argv[2], strlen(argv[2]) + 1);
-    sleep(5);
-
-    printf("%s","KEEPING CONNECTION OPEN \n");
-=======
     // Create two threads (one for reading and one for writing)
     pthread_create(&thread1, NULL, write_messages, NULL);
     pthread_create(&thread2, NULL, get_input, NULL);
->>>>>>> 723b826e724c342b90a329ef65a371415c64885e
 
     pthread_join(thread1, NULL);
     pthread_join(thread2, NULL);

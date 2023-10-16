@@ -12,25 +12,33 @@
 #define MAX_CLIENTS 10
 #define BUF_SIZE 4096
 
-int clients[MAX_CLIENTS];
+struct client_info
+{
+    int client_id;
+    char name[20];
+    struct sockaddr_in caddr;
+};
+
+struct client_info clients[MAX_CLIENTS];
 int client_sz = 0;
 
-void handle_client(int client, int clients[], int *client_sz)
+void handle_client(struct client_info client, struct client_info clients[], int *client_sz)
 {
     char buff[BUF_SIZE];
+    char message[BUF_SIZE + sizeof(struct client_info) + 1];
     ssize_t bytesReceived;
 
     while (1)
     {
-        bytesReceived = recv(client, buff, sizeof(buff), 0);
+        bytesReceived = recv(client.client_id, buff, sizeof(buff), 0);
         if (bytesReceived <= 0)
         {
             // Handle client disconnection or error here
-            close(client);
+            close(client.client_id);
             // Remove the client from the array (if it exists)
             for (int i = 0; i < *client_sz; i++)
             {
-                if (clients[i] == client)
+                if (clients[i].client_id == client.client_id)
                 {
                     // Shift the rest of the clients to fill the gap
                     for (int j = i; j < *client_sz - 1; j++)
@@ -42,16 +50,14 @@ void handle_client(int client, int clients[], int *client_sz)
             return;
         }
 
+        sprintf(message, "%s: %s", inet_ntoa(client.caddr.sin_addr), buff);
+
         // Broadcast the received message to all clients
         for (int i = 0; i < *client_sz; i++)
         {
-            int c = clients[i];
-            if (c != client)
+            if (send(clients[i].client_id, message, strlen(message) + 1, 0) == -1)
             {
-                if (send(c, buff, bytesReceived, 0) == -1)
-                {
-                    perror("send");
-                }
+                perror("send");
             }
         }
 
@@ -60,11 +66,11 @@ void handle_client(int client, int clients[], int *client_sz)
     }
 }
 
-int check_client(int client, int clients[], int client_sz)
+int check_client(int client_id, struct client_info clients[], int client_sz)
 {
     for (int i = 0; i < client_sz; i++)
     {
-        if (clients[i] == client)
+        if (clients[i].client_id == client_id)
         {
             return 0;
         }
@@ -74,8 +80,7 @@ int check_client(int client, int clients[], int client_sz)
 
 void *client_thread(void *arg)
 {
-    int client = *(int *)arg;
-    free(arg);
+    struct client_info client = *(struct client_info *)arg;
     handle_client(client, clients, &client_sz);
     pthread_exit(NULL);
 }
@@ -112,12 +117,12 @@ int main()
     while (1)
     {
         int csize = sizeof(caddr);
-        int *client = (int *)malloc(sizeof(int));
-        *client = accept(server, (struct sockaddr *)&caddr, &csize);
-        if (*client == -1)
+        int *client_id = (int *)malloc(sizeof(int));
+        *client_id = accept(server, (struct sockaddr *)&caddr, &csize);
+        if (*client_id == -1)
         {
             perror("accept");
-            free(client);
+            free(client_id);
             continue;
         }
 
@@ -126,23 +131,26 @@ int main()
         if (client_sz == MAX_CLIENTS)
         {
             puts("Server is full");
-            send(*client, "Server is full", 14, 0);
-            close(*client);
-            free(client);
+            send(*client_id, "Server is full", 14, 0);
+            close(*client_id);
+            free(client_id);
             continue;
         }
 
-        if (check_client(*client, clients, client_sz))
+        if (check_client(*client_id, clients, client_sz))
         {
-            clients[client_sz++] = *client;
+            struct client_info client_info = {
+                .client_id = *client_id,
+                .caddr = caddr};
+            clients[client_sz++] = client_info;
             pthread_t tid;
-            pthread_create(&tid, NULL, client_thread, client);
+            pthread_create(&tid, NULL, client_thread, &client_info);
             pthread_detach(tid);
         }
         else
         {
-            // If the client is already in the list, free the allocated memory.
-            free(client);
+            // If the client_id is already in the list, free the allocated memory.
+            free(client_id);
         }
     }
 
