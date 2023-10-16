@@ -47,6 +47,8 @@ void set_name(char *buff)
 
     pthread_mutex_lock(&mutex);
 
+    sprintf(buff, "/setname %s", name);
+
     // Send the name to the server
     send(s, buff, strlen(buff) + 1, 0);
 
