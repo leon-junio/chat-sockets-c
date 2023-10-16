@@ -172,7 +172,7 @@ int main(int argc, char **argv)
     struct sockaddr_in channel;
     pthread_t thread1;
 
-    if (argc != 2)
+    if (argc < 2)
         fatal("Usage: client <server-name> [name]");
 
     h = gethostbyname(argv[1]);
