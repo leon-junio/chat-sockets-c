@@ -199,7 +199,7 @@ int main(int argc, char **argv)
     {
         char *name = argv[2];
         char buff[BUF_SIZE];
-        sprintf(buff, "/setname %s", name);
+        sprintf(buff, "/setname %s\n", name);
         set_name(buff);
     }
 
