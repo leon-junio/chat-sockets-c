@@ -107,7 +107,7 @@ void check_command(char *buff)
     else if (strstr(buff, "/msg") != NULL)
     {
 
-        char buff[BUF_SIZE], time_string[9];
+        char time_string[9];
         int bytes;
         time_t current_time;
         struct tm *time_info;
