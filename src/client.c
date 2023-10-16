@@ -85,6 +85,19 @@ void check_command(char *buff)
 
         pthread_mutex_unlock(&mutex);
     }
+    else if (strcmp(buff, "/list\n") == 0)
+    {
+        pthread_mutex_lock(&mutex);
+
+        send(s, buff, strlen(buff) + 1, 0);
+
+        // Wait for the server to respond
+        read(s, buff, BUF_SIZE);
+
+        printf("%s", buff);
+
+        pthread_mutex_unlock(&mutex);
+    }
     else
     {
         printf("Invalid command. Type '/help' for a list of commands.\n");
