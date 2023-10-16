@@ -69,11 +69,13 @@ int check_command(char *buff, struct client_info *client)
     else if (strcmp(buff, "/list\n") == 0)
     {
         char message[BUF_SIZE];
+		char *aux = (char*) malloc(BUF_SIZE);
         for (int i = 0; i < client_sz; i++)
         {
             sprintf(message, "%d: %s <%s>\n", i, clients[i]->name, inet_ntoa(clients[i]->caddr.sin_addr));
-            send(client->client_id, message, strlen(message) + 1, 0);
+            strcat(aux,message);
         }
+		send(client->client_id, aux, strlen(aux) + 1, 0);
     }
     else if (strcmp(buff, "/ping\n") == 0)
     {
@@ -147,7 +149,7 @@ void handle_client(struct client_info *client)
             return;
         }
 
-        printf("data received!");
+        printf("data received from: %s", client->name);
 
         printf("%s\n", buff);
 
