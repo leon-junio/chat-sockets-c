@@ -72,8 +72,8 @@ int check_command(char *buff, struct client_info *client)
         for (int i = 0; i < client_sz; i++)
         {
             sprintf(message, "%d: %s <%s>\n", i, clients[i]->name, inet_ntoa(clients[i]->caddr.sin_addr));
+            send(client->client_id, message, strlen(message) + 1, 0);
         }
-        send(client->client_id, message, strlen(message) + 1, 0);
     }
     else if (strcmp(buff, "/ping\n") == 0)
     {
