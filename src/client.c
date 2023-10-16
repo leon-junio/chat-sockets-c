@@ -47,6 +47,9 @@ int main(int argc, char **argv)
         fatal("connect failed");
 
     write(s, argv[2], strlen(argv[2]) + 1);
+    sleep(5);
+
+    printf("%s","KEEPING CONNECTION OPEN \n");
 
     while (1)
     {
