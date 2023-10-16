@@ -81,9 +81,16 @@ int main(int argc, char **argv)
     if (c < 0)
         fatal("connect failed");
 
+<<<<<<< HEAD
+    write(s, argv[2], strlen(argv[2]) + 1);
+    sleep(5);
+
+    printf("%s","KEEPING CONNECTION OPEN \n");
+=======
     // Create two threads (one for reading and one for writing)
     pthread_create(&thread1, NULL, write_messages, NULL);
     pthread_create(&thread2, NULL, get_input, NULL);
+>>>>>>> 723b826e724c342b90a329ef65a371415c64885e
 
     pthread_join(thread1, NULL);
     pthread_join(thread2, NULL);
