@@ -98,6 +98,37 @@ void check_command(char *buff)
 
         pthread_mutex_unlock(&mutex);
     }
+    else if (strstr(buff, "/setname") != NULL)
+    {
+        set_name(buff);
+    }
+    else if (strstr(buff, "/msg") != NULL)
+    {
+
+        char buff[BUF_SIZE], time_string[9];
+        int bytes;
+        time_t current_time;
+        struct tm *time_info;
+        pthread_mutex_lock(&mutex);
+
+        // Send the message to the server
+        send(s, buff, strlen(buff) + 1, 0);
+
+        bytes = read(s, buff, BUF_SIZE);
+
+        if (bytes <= 0)
+            fatal("recv failed: disconnected");
+
+        time(&current_time);
+        time_info = localtime(&current_time);
+
+        strftime(time_string, sizeof(time_string), "%H:%M:%S", time_info);
+
+        // Print the messages
+        printf("[%s] \033[35m%s\033[0m\n", time_string, buff);
+
+        pthread_mutex_unlock(&mutex);
+    }
     else
     {
         printf("Invalid command. Type '/help' for a list of commands.\n");
