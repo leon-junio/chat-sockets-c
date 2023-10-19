@@ -1,3 +1,11 @@
+/*
+*
+* MESSAGE SOCKET SERVER 
+* Client mode
+* @author: Edmar Melandes de Oliveira e Leon Junio Martins
+*
+*/
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -15,6 +23,7 @@
 int s;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+// Throws a fatal exception and abort the program
 void fatal(char *string)
 {
     printf("%s\n", string);
@@ -22,6 +31,7 @@ void fatal(char *string)
     exit(1);
 }
 
+// Help commands to print over the screen
 void help()
 {
     printf("You can now start typing messages.\n");
@@ -35,6 +45,7 @@ void help()
     printf("  /help: Display this help message\n");
 }
 
+// Function to proccess Command set_name (before sent to server)
 void set_name(char *buff)
 {
     char *name = strtok(buff, " ");
@@ -55,6 +66,8 @@ void set_name(char *buff)
     pthread_mutex_unlock(&mutex);
 }
 
+// Function to check if some string is a command
+// @param receive some char buff
 void check_command(char *buff)
 {
     if (strcmp(buff, "/exit\n") == 0)
@@ -137,6 +150,9 @@ void check_command(char *buff)
     }
 }
 
+// Function to write messages in the screen
+// This function will run inside a new thread
+// This function will perform a while true searching for new messages
 void *write_messages(void *arg)
 {
     char buff[BUF_SIZE], time_string[9];
@@ -164,6 +180,8 @@ void *write_messages(void *arg)
     }
 }
 
+// Void main is the Main thread that start the client and wait for new inputs from stdin
+// This thread will receive the client buffer and send it to Server
 int main(int argc, char **argv)
 {
     int c, res;

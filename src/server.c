@@ -1,3 +1,11 @@
+/*
+*
+* MESSAGE SOCKET SERVER 
+* Server mode
+* @author: Edmar Melandes de Oliveira e Leon Junio Martins
+*
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -12,6 +20,7 @@
 #define MAX_CLIENTS 10
 #define BUF_SIZE 4096
 
+// Save client info
 struct client_info
 {
     int client_id;
@@ -19,9 +28,14 @@ struct client_info
     struct sockaddr_in caddr;
 };
 
+// All Clients array (length: MAX_CLIENTS)
+// Each client have a struct and a thread running when the connection is up
 struct client_info *clients[MAX_CLIENTS];
+// Array clients counter
 int client_sz = 0;
 
+// Remove some client from connections and reallocate the position in the array
+// Removing a client drop all info about that client connection (break broadcast and unicast)
 void remove_client(int client_id)
 {
     for (int i = 0; i < client_sz; i++)
@@ -37,6 +51,8 @@ void remove_client(int client_id)
     }
 }
 
+// Check if a string buff is a command and perform the action associated with it
+// All commands sent back some message to the client
 int check_command(char *buff, struct client_info *client)
 {
     if (strcmp(buff, "/quit\n") == 0)
@@ -130,6 +146,8 @@ int check_command(char *buff, struct client_info *client)
     return 1;
 }
 
+// This function is called each time that a new client is created and run until the client disconnect from the server
+// This function can read new messages from the client, perform broadcasts and call commands from check_command function
 void handle_client(struct client_info *client)
 {
     char buff[BUF_SIZE];
@@ -166,15 +184,14 @@ void handle_client(struct client_info *client)
                 }
             }
         }
-
         puts(buff);
         fflush(stdout);
     }
 }
 
+//Check if the client exists in the clients array
 int check_client(int client_id)
 {
-    printf("Checking client %d\n", client_id);
     for (int i = 0; i < client_sz; i++)
     {
         if (clients[i]->client_id == client_id)
@@ -185,6 +202,8 @@ int check_client(int client_id)
     return 1;
 }
 
+// Client thread start the read loop for data that come from netif
+// Each thread will run in parallel
 void *client_thread(void *arg)
 {
     struct client_info *client = (struct client_info *)arg;
@@ -192,6 +211,7 @@ void *client_thread(void *arg)
     pthread_exit(NULL);
 }
 
+//The main thread that accept new clients for the server and start all the other services
 int main()
 {
     char buff[BUF_SIZE];
@@ -220,7 +240,8 @@ int main()
         perror("listen");
         exit(1);
     }
-
+	
+	// wait for new clients
     while (1)
     {
         int csize = sizeof(caddr);
@@ -244,7 +265,8 @@ int main()
             free(client_id);
             continue;
         }
-
+		
+		// start client receive thread
         if (check_client(*client_id) == 1)
         {
             *client_info = (struct client_info){
@@ -252,12 +274,6 @@ int main()
                 .caddr = caddr,
                 .name = "Anonymous"};
             clients[client_sz++] = client_info;
-            printf("%p\n", &client_info);
-            // print array of clients
-            for (int i = 0; i < client_sz; i++)
-            {
-                printf("%d: %d <%s>\n", i, clients[i]->client_id, inet_ntoa(clients[i]->caddr.sin_addr));
-            }
             pthread_t tid;
             pthread_create(&tid, NULL, client_thread, client_info);
             pthread_detach(tid);
