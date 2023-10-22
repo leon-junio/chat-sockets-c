@@ -1,4 +1,4 @@
-## CHAT WITH SOCKETS WITH C
+## CHAT WITH SOCKETS
 A broadcast chat system with options to set name, sent private messages and chat anonymous! Written in C with TCP Sockets.
 
 ## Requirements
