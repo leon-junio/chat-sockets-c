@@ -1,12 +1,12 @@
 ## CHAT WITH SOCKETS USING C
-A chat broadcast system with options to set name, sent private messages and chat anonymous!
+A broadcast chat system with options to set name, sent private messages and chat anonymous! Written in C with TCP Sockets.
 
 ## Requirements
 
 - GCC
 - Linux only (Tested with Ubuntu)
 - Port 5000 free and unlocked by firewall
-- > Server is compatible with a remote network (AWS, AZURE or Google Cloud)
+> Server is compatible with a remote network (AWS, AZURE or Google Cloud)
 
 ## How to run
 
@@ -26,6 +26,7 @@ A chat broadcast system with options to set name, sent private messages and chat
 - Starting client with a name
   `./client 127.0.0.1 usernameX` 
 - Type `/help` at client console to see more options!
+- Type anything and hit enter to sent to all other connected clients
   
 ## Authors
 
